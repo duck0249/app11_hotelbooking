@@ -1,6 +1,8 @@
 import pandas as pd
 
 df = pd.read_csv("./hotels.csv", dtype={"id":str})
+df_card = pd.read_csv("./cards.csv", dtype=str).to_dict(orient="records")
+df_cards_security = pd.read_csv("./card_security.csv", dtype=str)
 
 
 class Hotel:
@@ -39,19 +41,57 @@ class ReservationTicket:
 
 
 class CreditCard:
-	pass
+	def __init__(self, number):
+		self.number = number
+
+	def validate(self, expiration, holder, cvc):
+		card_data = {"number": self.number, "expiration": expiration,
+					 "holder": holder, "cvc": cvc}
+		if card_data in df_card:
+			return True
+		else:
+			return False
 
 
+class SecureCreditCard(CreditCard):
+	def authentication(self, given_password):
+		password = df_cards_security.loc[df_cards_security["number"]==self.number, "password"]
+		
+		if password.empty:
+			print("No matching card found.")
+			return False
+
+		password = password.squeeze()
+		if pd.isna(password):
+			print("Password not found.")
+			return False
+		if password == given_password:
+			return True
+		else:
+			return False
+
+		
 print(df)
 hotel_ID = input("Enter the id of the hotel: ")
 hotel = Hotel(hotel_ID)
 
 if hotel.available():
-	credit_car = CreditCard()
-	hotel.book()
-	name = input("Enter your name: ")
-	reservation_ticket = ReservationTicket(customer_name=name, hotel_object=hotel)
-	print(reservation_ticket.generate())
+	# card_number = input("Enter your credit card numbers :")
+	# expiration_date = input("Enter your credit card expiration date: ")
+	credit_card = SecureCreditCard(number="1234567812341234")
+	if credit_card.validate(expiration="12/26",
+							holder="Andrew Lee",
+							cvc="123"):
+		if credit_card.authentication(given_password="mypass"):
+			hotel.book()
+			name = input("Enter your name: ")
+			reservation_ticket = ReservationTicket(customer_name=name,
+											 	   hotel_object=hotel)
+			print(reservation_ticket.generate())
+		else:
+			print("Credit Card Authentication failed.")
+	else:
+		print("Your credit card has problems.")
 
 else:
 	print("Hotel is not available.")
